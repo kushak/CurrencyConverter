@@ -1,4 +1,3 @@
-//
 //  ViewController.swift
 //  Currency conwerter
 //
@@ -19,10 +18,14 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
     
 //    var currencies = ["RUB", "USD", "EUR"]
     var currencies = ["RON", "EUR", "MYR"]
+    var rates = [0.0, 0.0, 0.0]
     
     override func viewDidLoad() {
         super.viewDidLoad()
         self.label.text = "Тут будет курс"
+        self.label.layoutIfNeeded()
+        self.label.layer.masksToBounds = true
+        self.label.layer.cornerRadius = self.label.frame.size.height / 3
         
         self.pickerFrom.dataSource = self
         self.pickerTo.dataSource = self
@@ -57,7 +60,7 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
     
     func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
         if pickerView == self.pickerTo {
-            return self.currenciesExceptBase()[row]
+            return "\(self.rates[row]) \(self.currenciesExceptBase()[row])"
         }
         
         return self.currencies[row]
@@ -91,6 +94,10 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
             if let parsedJSON = json {
 //                print("\(parsedJSON)")
                 if let rates = parsedJSON["rates"] as? Dictionary<String, Double> {
+                    
+                    if self.rates.count != 0 {
+                        self.rates = Array(rates.values)
+                    }
                     
                     if self.currencies == ["RON", "EUR", "MYR"] {
                         self.currencies = [baseCurrency]

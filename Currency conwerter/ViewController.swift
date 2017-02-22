@@ -16,9 +16,7 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
     
     @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
     
-//    var currencies = ["RUB", "USD", "EUR"]
-    var currencies = ["RON", "EUR", "MYR"]
-    var rates = [0.0, 0.0, 0.0]
+    var currencies = [String]()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -35,7 +33,7 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
         
         self.activityIndicator.hidesWhenStopped = true
         
-        self.requestCurrentCurrencyRate()
+        self.firstInitRequestCurencyRate()
     }
 
     override func didReceiveMemoryWarning() {
@@ -50,7 +48,7 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
     
     func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
         if pickerView == self.pickerTo {
-            return self.currenciesExceptBase().count
+            return self.currencies.count != 0 ? self.currenciesExceptBase().count : 0
         }
         
         return self.currencies.count
@@ -60,7 +58,7 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
     
     func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
         if pickerView == self.pickerTo {
-            return "\(self.rates[row]) \(self.currenciesExceptBase()[row])"
+            return "\(self.currenciesExceptBase()[row])"
         }
         
         return self.currencies[row]
@@ -73,6 +71,24 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
         }
         
         self.requestCurrentCurrencyRate()
+    }
+    //MARK: API
+    func firstInitRequestCurencyRate() {
+        self.activityIndicator.startAnimating()
+        self.label.text = ""
+        
+        self.retrieveCurrencyRate(baseCurrency: nil, toCurrency: nil) {[weak self] (value) in
+            DispatchQueue.main.async(execute: {
+                if let strongSelf = self {
+                    if strongSelf.label.text != value {
+                        strongSelf.label.text = value
+                    }
+                    strongSelf.activityIndicator.stopAnimating()
+                    strongSelf.pickerFrom.reloadAllComponents()
+                    strongSelf.pickerTo.reloadAllComponents()
+                }
+            })
+        }
     }
     
     func requestCurrentCurrencyRate() {
@@ -99,7 +115,7 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
         }
     }
     // retrieve - извлечь
-    func retrieveCurrencyRate(baseCurrency: String, toCurrency: String, complition: @escaping (String) -> Void) {
+    func retrieveCurrencyRate(baseCurrency: String?, toCurrency: String?, complition: @escaping (String) -> Void) {
         self.requestCurrencyRates(baseCurrency: baseCurrency) {[weak self] (data, error) in
             var string = "No currency retieved!"
             
@@ -115,8 +131,13 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
         }
     }
     
-    func requestCurrencyRates(baseCurrency: String, parseHandler: @escaping (Data?, Error?) -> Void) {
-        let url = URL(string: "https://api.fixer.io/latest?base=" + baseCurrency)!
+    func requestCurrencyRates(baseCurrency: String?, parseHandler: @escaping (Data?, Error?) -> Void) {
+        let url: URL
+        if baseCurrency == nil {
+            url = URL(string: "https://api.fixer.io/latest")!
+        } else {
+            url = URL(string: "https://api.fixer.io/latest?base=" + baseCurrency!)!
+        }
         
         let dataTask = URLSession.shared.dataTask(with: url) {
             (dataReceived, response, error) in
@@ -126,28 +147,25 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
         dataTask.resume()
     }
     
-    func parseCurrencyRatesResponse(data: Data?, toCurrency: String) -> String {
+    func parseCurrencyRatesResponse(data: Data?, toCurrency: String?) -> String {
         var value: String = ""
         
         do {
             let json = try JSONSerialization.jsonObject(with: data!, options: []) as? Dictionary<String, Any>
             if let parsedJSON = json {
-//                print("\(parsedJSON)")
+                print("\(parsedJSON)")
                 if let rates = parsedJSON["rates"] as? Dictionary<String, Double>,
                     let baseCurrency = parsedJSON["base"] as? String {
                     
-                    if self.rates.count != 0 {
-                        self.rates = Array(rates.values)
-                    }
-                    
-                    if self.currencies == ["RON", "EUR", "MYR"] {
+                    if self.currencies.isEmpty {
                         self.currencies = [baseCurrency]
                         self.currencies += Array(rates.keys) //Добавлеяем все валюты в массив валют
                     }
-                    if let rate = rates[toCurrency] {
-                        value = "1 \(baseCurrency) = \(rate) \(toCurrency)"
+                    let keyToCurrency = (toCurrency != nil ? toCurrency : Array(rates.keys).first)!
+                    if let rate = rates[keyToCurrency] {
+                        value = "1 \(baseCurrency) = \(rate) \(keyToCurrency)"
                     } else {
-                        value = "No rate for currence \"\(toCurrency)\" found"
+                        value = "No rate for currence \"\(keyToCurrency)\" found"
                     }
                 } else {
                     value = "No \"rates\" field found"
@@ -162,6 +180,7 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
         return value
     }
     
+    //MARK: Class Methods
     func currenciesExceptBase() -> [String] {
         var currenciesExceptBase = self.currencies
         currenciesExceptBase.remove(at: self.pickerFrom.selectedRow(inComponent: 0))
@@ -169,4 +188,3 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
         return currenciesExceptBase
     }
 }
-

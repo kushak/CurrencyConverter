@@ -1,5 +1,5 @@
 //  ViewController.swift
-//  Currency conwerter
+//  Currency converter
 //
 //  Created by user on 20.02.17.
 //  Copyright © 2017 Oleg Shipulin. All rights reserved.
@@ -8,7 +8,7 @@
 import UIKit
 
 class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDelegate {
-
+    
     @IBOutlet weak var label: UILabel!
     
     @IBOutlet weak var pickerFrom: UIPickerView!
@@ -35,7 +35,7 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
         
         self.firstInitRequestCurencyRate()
     }
-
+    
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
     }
@@ -188,3 +188,4 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
         return currenciesExceptBase
     }
 }
+
